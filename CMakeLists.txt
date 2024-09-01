@@ -10,15 +10,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Add all of the packages that we need to build our project.
 # vcpkg should find them all for us
-#find_package(glm CONFIG REQUIRED)
-#find_package(imgui CONFIG REQUIRED)
-#find_package(glfw3 CONFIG REQUIRED)
+find_package(SDL2 CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
 
 #set(ALL_LIBRARY_INCLUDE_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include/")
 
-#find_path(GLFW_INCLUDE_DIR NAMES glfw3.h PATH_SUFFIXES GLFW)
-#find_path(GLM_INCLUDE_DIR NAMES glm.hpp PATH_SUFFIXES glm)
-#find_path(IMGUI_INCLUDE_DIR NAMES imgui.h PATH_SUFFIXES imgui)
+find_path(SDL2_INCLUDE_DIR NAMES SDL.h SDL_Main.h)
+find_path(GLM_INCLUDE_DIR NAMES glm.hpp PATH_SUFFIXES glm)
+
+add_subdirectory(lib/)
 
 # Our individual sub-projects
 add_subdirectory(Game/)

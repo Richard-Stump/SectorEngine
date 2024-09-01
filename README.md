@@ -9,11 +9,4 @@
     - [ ] 
 
 ## Building
-
-### Dependencies:
-
-| Library | Version Used | Notes |
-|---------|--------------|-------|
-| SDL 2         | 2.0.0         | Used for windowing and input. SDL2 
-| OpenGL 3.1     | 
-| Glad
+D:/dev/vcpkg/scripts/buildsystems/vcpkg.cmake
