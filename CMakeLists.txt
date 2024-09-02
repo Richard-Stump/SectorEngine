@@ -23,4 +23,12 @@ add_subdirectory(lib/)
 # Our individual sub-projects
 add_subdirectory(Game/)
 
+file(GLOB_RECURSE GameDataFiles ${CMAKE_SOURCE_DIR}/GameData/*)
+
+message(warning ${GameDataFiles})
+
+add_custom_target(GameData SOURCES
+	${GameDataFiles}
+)
+
 

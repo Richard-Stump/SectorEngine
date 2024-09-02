@@ -23,7 +23,7 @@ struct Sector
 	float ceilingHeight;
 
 	uint32_t	firstWall;
-	uint32_t	lastWall;
+	uint32_t	wallCount;
 };
 
 /**
@@ -37,6 +37,7 @@ struct Wall
 
 	uint32_t	startVertex;
 	uint32_t	nextWall;
+	uint32_t	behindSector;
 };
 
 /**
