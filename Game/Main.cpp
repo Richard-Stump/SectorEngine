@@ -135,10 +135,10 @@ void handleInput()
     const float turnSpeed = 0.1;
 
     if (keys[SDL_SCANCODE_SPACE]) {
-        player.pos.y += climbSpeed;
+        player.pos.z += climbSpeed;
     }
     if (keys[SDL_SCANCODE_LALT]) {
-        player.pos.y -= climbSpeed;
+        player.pos.z -= climbSpeed;
     }
 
     if (keys[SDL_SCANCODE_LEFT]) {
@@ -148,8 +148,8 @@ void handleInput()
         player.angle -= turnSpeed;
     }
 
-    glm::vec3 forwards{ -glm::cos(player.angle), 0.0f, glm::sin(player.angle) };
-    glm::vec3 right{ -forwards.z, 0.0f, forwards.x };
+    glm::vec3 forwards { glm::cos(player.angle), glm::sin(player.angle), 0.0f };
+    glm::vec3 right { forwards.y, -forwards.x, 0.0f };
 
     if (keys[SDL_SCANCODE_W]) {
         player.pos += forwards * moveSpeed;
@@ -163,7 +163,6 @@ void handleInput()
     if (keys[SDL_SCANCODE_D]) {
         player.pos += right * moveSpeed;
     }
-
 }
 
 int main(int argc, char** argv)

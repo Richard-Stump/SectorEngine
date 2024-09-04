@@ -83,8 +83,8 @@ void Renderer::renderLevel(const Level& level, glm::vec3 camPos, float angle)
 
 	glm::mat4 matView = glm::lookAt(
 		camPos,
-		camPos + glm::vec3{ -glm::cos(angle), 0, glm::sin(angle) },
-		{ 0, 1.0f, 0.0 }
+		camPos + glm::vec3{ glm::cos(angle), glm::sin(angle), 0.0f },
+		{ 0, 0.0, 1.0 }
 	);
 
 	const float scale = 1.0 / 8.0;
