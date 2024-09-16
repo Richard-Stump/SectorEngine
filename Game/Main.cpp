@@ -12,7 +12,7 @@
 
 struct
 {
-    glm::vec3   pos = { 0, 0, 0 };
+    glm::vec3   pos = { 0, 0, 4 };
     float       angle = glm::radians(90.0); 
 } player;
 

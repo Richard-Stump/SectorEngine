@@ -31,7 +31,6 @@ add_executable(SectorEngine
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADER_FILES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_FILES})
 
-
 target_link_libraries(SectorEngine 
     SDL2::SDL2 
     SDL2::SDL2main
@@ -40,11 +39,10 @@ target_link_libraries(SectorEngine
     glad
 )
 
-message(WARNING ${GLAD_INCLUDE_DIR})
-
 target_include_directories(SectorEngine PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${SDL2_INCLUDE_DIR}
     ${GLM_INCLUDE_DIR}
     ${GLAD_INCLUDE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CDT_INCLUDE_DIR}
 )

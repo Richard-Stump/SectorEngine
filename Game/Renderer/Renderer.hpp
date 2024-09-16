@@ -26,6 +26,8 @@ public:
 private:
 
 	int buildMesh(const Level& level, std::vector<glm::vec3>& mesh);
+	int buildWallMesh(const Level& level, std::vector<glm::vec3>& mesh);
+	int buildFlatMesh(const Level& level, std::vector<glm::vec3>& mesh);
 
 	ShaderProgram shader;
 
