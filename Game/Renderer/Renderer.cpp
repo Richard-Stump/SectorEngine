@@ -66,12 +66,17 @@ void Renderer::beginFrame(int width, int height)
 
 	_width = width;
 	_height = height;
+
+	meshTimer.reset();
+	glTimer.reset();
 }
 
 void Renderer::renderLevel(const Level& level, glm::vec3 camPos, float angle)
 {
 	std::vector<glm::vec3> data;
 	int vertexCount = buildMesh(level, data);
+
+	glTimer.start();
 
 	glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(glm::vec3), data.data(), GL_DYNAMIC_DRAW);
 	checkGl();
@@ -99,6 +104,8 @@ void Renderer::renderLevel(const Level& level, glm::vec3 camPos, float angle)
 
 	glDrawArrays(GL_TRIANGLES, 0, vertexCount);
 	checkGl();
+
+	glTimer.stop();
 }
 
 void Renderer::endFrame()
@@ -209,9 +216,10 @@ int Renderer::buildWallMesh(const Level& level, std::vector<glm::vec3>& mesh)
 
 	return vertexCount;
 }
+
 /**
  * Adds the flats (Floor, Ceilings) to the render mesh.
- * 
+ *
  * \param level The level we are rendering
  * \param mesh  The mesh vector to add to
  * \return		The number of vertices added to the mesh
@@ -220,36 +228,45 @@ int Renderer::buildFlatMesh(const Level& level, std::vector<glm::vec3>& mesh)
 {
 	int vertexCount = 0;
 
-	for(const Sector& sector : level.sectors) {
+	for (const Sector& sector : level.sectors) {
 		CDT::Triangulation<float> triangulation;
 
 		std::vector<glm::vec2> sectorVerts;
 		std::vector<std::pair<size_t, size_t>> sectorEdges;
 
-		for (int i = 0; i < sector.wallCount; i++) {
+		uint32_t loopStartWallIndex = sector.firstWall;	// Which wall did this edge loop start on?
+		size_t loopStartVertexIndex = 0;				// What vertex number did this edge loop start on?
+
+		// Loop through all of the walls in the sector so we can add them to the triangulation.
+		for (size_t i = 0; i < sector.wallCount; i++) {
 			const Wall& wall = level.walls[sector.firstWall + i];
+			bool endOfEdgeLoop = (wall.nextWall == loopStartWallIndex);
 
-			uint32_t startIndex = wall.startVertex;
-			uint32_t endIndex = level.walls[wall.nextWall].startVertex;
+			glm::vec2 startVertex = level.vertices[wall.startVertex];
+			sectorVerts.push_back(startVertex);
 
-			glm::vec2 start = level.vertices[startIndex];
-			glm::vec2 end = level.vertices[endIndex];
-
-			sectorVerts.push_back(start);
-
-			uint32_t nextIndex = (i == sector.wallCount - 1) ? 0 : i + 1;
-			sectorEdges.push_back(std::make_pair<size_t, size_t>(i, nextIndex));
+			// If we reach the end of the edge loop, mark the end vertex of the edge to be the start index
+			// for this loop. Otherwise, mark it as the next vertex we are going to add. 
+			size_t edgeEndVertexIndex = endOfEdgeLoop ? loopStartVertexIndex : i + 1;
+			sectorEdges.push_back(std::make_pair(i, edgeEndVertexIndex));
+			
+			// If we have reached the end of this edge loop, set the indices for the start of the
+			// next one. 
+			if (endOfEdgeLoop) {
+				loopStartWallIndex = sector.firstWall + i + 1;
+				loopStartVertexIndex = i + 1;
+			}
 		}
 
 		triangulation.insertVertices(
-			sectorVerts.begin(), 
+			sectorVerts.begin(),
 			sectorVerts.end(),
 			[](const glm::vec2& v) { return v.x; },
 			[](const glm::vec2& v) { return v.y; }
 		);
 
 		triangulation.insertEdges(
-			sectorEdges.begin(), 
+			sectorEdges.begin(),
 			sectorEdges.end(),
 			[](const std::pair<size_t, size_t>& e) { return e.first; },
 			[](const std::pair<size_t, size_t>& e) { return e.second; }
@@ -286,14 +303,18 @@ int Renderer::buildFlatMesh(const Level& level, std::vector<glm::vec3>& mesh)
 			vertexCount += 6;
 		}
 	}
-	
+
 	return vertexCount;
 }
 
 int Renderer::buildMesh(const Level& level, std::vector<glm::vec3>& mesh)
 {
+	meshTimer.start();
+
 	int vertexCount = buildWallMesh(level, mesh);
 	vertexCount += buildFlatMesh(level, mesh);
+
+	meshTimer.stop();
 
 	return vertexCount;
 }

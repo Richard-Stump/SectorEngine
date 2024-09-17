@@ -13,12 +13,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(SDL2 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(cdt CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
 
 #set(ALL_LIBRARY_INCLUDE_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include/")
 
 find_path(SDL2_INCLUDE_DIR NAMES SDL.h SDL_Main.h)
 find_path(GLM_INCLUDE_DIR NAMES glm.hpp PATH_SUFFIXES glm)
 find_path(CDT_INCLUDE_DIR NAMES CDT.h CDT.hpp)
+find_path(IMGUI_INCLUDE_DIR NAMES imgui.h PATH_SUFFIXES imgui)
 
 add_subdirectory(lib/)
 

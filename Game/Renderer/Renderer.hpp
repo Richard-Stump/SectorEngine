@@ -4,6 +4,7 @@
 #include <Resource/MapLoader.hpp>
 #include "OpenGL.hpp"
 #include "Shader.hpp"
+#include <Utility/Timer.hpp>
 
 extern struct Level;
 
@@ -22,6 +23,9 @@ public:
 	void renderLevel(const Level& level, glm::vec3 camPos, float angle);
 
 	void endFrame();
+
+	Timer meshTimer;
+	Timer glTimer;
 
 private:
 

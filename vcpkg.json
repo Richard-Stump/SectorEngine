@@ -2,6 +2,13 @@
   "dependencies": [
     "glm",
     "sdl2",
-    "cdt"
+    "cdt",
+    {
+      "name": "imgui",
+      "features": [
+        "sdl2-binding",
+	      "opengl3-binding"
+      ]
+    }
   ]
 }

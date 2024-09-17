@@ -10,6 +10,11 @@
 
 #include <SDL2/SDL_opengl.h>
 
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_opengl3.h>
+#include <imgui.h>
+
+
 struct
 {
     glm::vec3   pos = { 0, 0, 4 };
@@ -49,7 +54,7 @@ std::unique_ptr<Level> buildTestLevel()
     level->vertices.push_back(Vertex{  96.0,  224.0 });
 
 
-// Add all the walls, going in CCW winding order for defining the insideof the sectors
+// Add all the walls, going in CCW winding order for defining the inside of the sectors
     level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 0, 1, Wall::NO_BEHIND });    // Sector 0 (Done)
     level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 1, 2, Wall::NO_BEHIND });
     level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 4, 3, 1});
@@ -91,6 +96,51 @@ std::unique_ptr<Level> buildTestLevel()
     return std::move(level);
 }
 
+// Haha, get it?
+// This is a simple 2-sector test level that has one sector completely inside another. This is intended
+// to test the triangulation code and make sure it can handle holes in the sectors. In Doom Style games, 
+// it is extremely common to have sectors inside of sectors (polys with holes). We want to automatically
+// handle this case so that level editor don't need to subdivide their sectors to avoid holes. 
+std::unique_ptr<Level> buildHolyLevel()
+{
+    auto level = std::make_unique<Level>();
+
+// Add all the verticies for the level
+    level->vertices.push_back(Vertex{ -64, -64 });
+    level->vertices.push_back(Vertex{  64, -64 });
+    level->vertices.push_back(Vertex{ -32, -32 });
+    level->vertices.push_back(Vertex{  32, -32 });
+    level->vertices.push_back(Vertex{ -32,  32 });
+    level->vertices.push_back(Vertex{  32,  32 });
+    level->vertices.push_back(Vertex{ -64,  64 });
+    level->vertices.push_back(Vertex{  64,  64 });
+
+// Add all the walls, going in CCW winding order for defining the inside of the sectors
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 0, 1, Wall::NO_BEHIND });     // Sector 0, outside wall
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 1, 2, Wall::NO_BEHIND });
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 7, 3, Wall::NO_BEHIND });
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 6, 0, Wall::NO_BEHIND });
+
+    // Since these walls create a hole in the sector, they are wound in the
+    // oposite direction
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 3, 5, 1 });     // Sector 0, inside wall
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 2, 6, 1 });
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 4, 7, 1 });
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 5, 4, 1 });
+
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 2, 9,  0 });     // Sector 1
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 3, 10, 0 });
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 5, 11, 0 });
+    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 4, 8,  0 });
+
+// Add all the sectors
+    level->sectors.push_back(Sector{ {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 0.0,   96.0,   0,   8 });
+    level->sectors.push_back(Sector{ {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, -32.0,   64.0,   8,   4 });
+
+
+    return std::move(level);
+}
+
 std::vector<std::string> getFilesystemLevels()
 {
     using namespace std::filesystem;
@@ -114,16 +164,25 @@ std::vector<std::string> getFilesystemLevels()
 std::unique_ptr<Level> getLevelSelection()
 {
     std::cout << "Select the level you want to play\n";
-    std::cout << "  0 - Hardcoded Test Level\n";
+    std::cout << "  0 - Initial Test Level\n";
+    std::cout << "  1 - Hole Test Level\n\n";
 
-    std::vector<std::string> levels = getFilesystemLevels();
-    for (size_t i = 1; i <= levels.size(); i++) {
-        std::cout << std::format("  {} - {}", i, levels[i - 1]) << "\n";
+    //std::vector<std::string> levels = getFilesystemLevels();
+    //for (size_t i = 2; i <= levels.size(); i++) {
+    //    std::cout << std::format("  {} - {}", i, levels[i - 2]) << "\n";
+    //}
+
+    std::cout << std::endl << "Type the number of the level: ";
+
+    unsigned int input = 0;
+    std::cin >> input;
+
+    switch (input) 
+    {
+    case 0: return std::move(buildTestLevel());
+    case 1: return std::move(buildHolyLevel());
+    default: return std::move(buildTestLevel());
     }
-
-    std::cout << std::endl;
-
-    return std::move(buildTestLevel());
 }
 
 void handleInput()
@@ -165,6 +224,59 @@ void handleInput()
     }
 }
 
+void RenderUi(const Renderer& renderer)
+{
+    if (ImGui::Begin("Performance", nullptr, 0))
+    {
+        ImGui::SeparatorText("Frame Timings");
+
+        ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
+        if (ImGui::BeginTable("Timers", 3, flags)) {
+            ImGui::TableSetupColumn("Timer", ImGuiTableColumnFlags_NoHide);
+            ImGui::TableSetupColumn("Frame", ImGuiTableColumnFlags_NoHide);
+            ImGui::TableSetupColumn("Average", ImGuiTableColumnFlags_NoHide);
+
+            ImGui::TableHeadersRow(); 
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();           ImGui::Text("Renderer");
+            ImGui::TableNextColumn();           ImGui::Text("--");
+            ImGui::TableNextColumn();           ImGui::Text("--");
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();           ImGui::Text("    Level");
+            ImGui::TableNextColumn();           ImGui::Text("--");
+            ImGui::TableNextColumn();           ImGui::Text("--");
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();           ImGui::Text("        Meshing");
+            ImGui::TableNextColumn();           ImGui::Text("%f", renderer.meshTimer.milleseconds());
+            ImGui::TableNextColumn();           ImGui::Text("--");
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();           ImGui::Text("        OpenGL");
+            ImGui::TableNextColumn();           ImGui::Text("%f", renderer.glTimer.milleseconds());
+            ImGui::TableNextColumn();           ImGui::Text("--");
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();           ImGui::Text("Game Sim");
+            ImGui::TableNextColumn();           ImGui::Text("--");
+            ImGui::TableNextColumn();           ImGui::Text("--");
+            ImGui::TableNextRow();
+
+
+            ImGui::TableNextColumn();           ImGui::Text("Total Frame Time");
+            ImGui::TableNextColumn();           ImGui::Text("--");
+            ImGui::TableNextColumn();           ImGui::Text("--");
+
+            ImGui::EndTable();
+
+        }
+
+        ImGui::End();
+    }
+}
+
 int main(int argc, char** argv)
 {
     std::unique_ptr<Level> level = getLevelSelection();
@@ -195,18 +307,26 @@ int main(int argc, char** argv)
         return -1;
     }
 
-
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
         std::cerr << "Could not load OpenGL\n" << std::endl;
         return -1;
     }
 
-    Renderer renderer;
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplSDL2_InitForOpenGL(window, context);
+    ImGui_ImplOpenGL3_Init("#version 330 core");
+
+   std::unique_ptr<Renderer> renderer = std::make_unique<Renderer>();
 
     bool running = true;
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+
             if (event.type == SDL_QUIT) {
                 running = false;
             }
@@ -214,20 +334,43 @@ int main(int argc, char** argv)
 
         handleInput();
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+
         int width, height;
         SDL_GetWindowSize(window, &width, &height);
 
-        renderer.beginFrame(width, height);
+        renderer->beginFrame(width, height);
 
-        renderer.renderLevel(*level, player.pos, player.angle);
+        renderer->renderLevel(*level, player.pos, player.angle);
 
-        renderer.endFrame();
-        
+        renderer->endFrame();
+
+
+        RenderUi(*renderer);
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        ImGui::EndFrame();
+
         SDL_GL_SwapWindow(window);
 
         SDL_Delay(10);
     }
 
+    // Manually release the renderer. 
+    // We need to clear the OpenGL state before de-initializing opengl and whatnot. 
+    renderer.release();
+    
+    glFinish();
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+
+    SDL_GL_DeleteContext(context);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return 0;
 }

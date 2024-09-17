@@ -20,7 +20,8 @@ set( HEADER_FILES
     Renderer/Shader.hpp
 
     Resource/MapLoader.hpp
-
+    
+    Utility/Timer.hpp
 )
 
 add_executable(SectorEngine
@@ -35,6 +36,7 @@ target_link_libraries(SectorEngine
     SDL2::SDL2 
     SDL2::SDL2main
     glm::glm
+    imgui::imgui
 
     glad
 )
@@ -45,4 +47,5 @@ target_include_directories(SectorEngine PRIVATE
     ${GLM_INCLUDE_DIR}
     ${GLAD_INCLUDE_DIR}
     ${CDT_INCLUDE_DIR}
+    ${IMGUI_INCLUDE_DIR}
 )
