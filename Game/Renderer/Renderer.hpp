@@ -20,7 +20,7 @@ public:
 
 	void beginFrame(int width, int height);
 
-	void renderLevel(const Level& level, glm::vec3 camPos, float angle);
+	void renderLevel(const Level& level, glm::vec3 camPos, float angle, float yaw);
 
 	void endFrame();
 

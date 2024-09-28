@@ -71,7 +71,7 @@ void Renderer::beginFrame(int width, int height)
 	glTimer.reset();
 }
 
-void Renderer::renderLevel(const Level& level, glm::vec3 camPos, float angle)
+void Renderer::renderLevel(const Level& level, glm::vec3 camPos, float angle, float yaw)
 {
 	std::vector<glm::vec3> data;
 	int vertexCount = buildMesh(level, data);
@@ -90,7 +90,7 @@ void Renderer::renderLevel(const Level& level, glm::vec3 camPos, float angle)
 
 	glm::mat4 matView = glm::lookAt(
 		camPos,
-		camPos + glm::vec3{ glm::cos(angle), glm::sin(angle), 0.0f },
+		camPos + glm::vec3{ glm::cos(angle) * glm::cos(yaw), glm::sin(angle) * glm::cos(yaw), sin(yaw)},
 		{ 0, 0.0, 1.0 }
 	);
 

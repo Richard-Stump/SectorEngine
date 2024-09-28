@@ -1,6 +1,7 @@
 #include <iostream> 
 #include <memory>
 #include <filesystem>
+#include <map>
 
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
@@ -19,7 +20,98 @@ struct
 {
     glm::vec3   pos = { 0, 0, 4 };
     float       angle = glm::radians(90.0); 
+    float       yaw = 0.0f;
 } player;
+
+
+void moveSectorUpAndDown(Level& level) {
+    float deltaTime = 0.01f;
+
+    static float timer = 0.0;
+    static bool moving = 0;
+    static int direction = -1;
+    static float initialFloorZ = level.sectors[1].floorHeight;
+    static float initialCeilingZ = level.sectors[1].ceilingHeight;
+
+    const float moveAmount = 64.0f;
+    const float moveSpeed = 24.0f;
+    const float pauseTime = 4.0f;
+
+    // If moving, updaate 
+    if (moving) {
+        Sector& sector = level.sectors[1];
+
+        sector.floorHeight += moveSpeed * direction * deltaTime;
+        sector.ceilingHeight += moveSpeed * direction * deltaTime;
+
+        // If we reach the end of our movement range, stop the movement and clamp the position. 
+        if (direction < 0 && sector.floorHeight <= initialFloorZ) {
+            sector.floorHeight = initialFloorZ;
+            sector.ceilingHeight = initialCeilingZ;
+
+            moving = false;
+        }
+        if (direction > 0 && sector.floorHeight >= initialFloorZ + moveAmount) {
+            sector.floorHeight = initialFloorZ + moveAmount;
+            sector.ceilingHeight = initialCeilingZ + moveAmount;
+
+            moving = false;
+        }
+    }
+    else { // Wait to move again
+        timer += deltaTime;
+
+        if (timer >= pauseTime) {
+            direction *= -1;
+            timer = 0.0f;
+            moving = true;
+        }
+    }
+}
+
+void moveSectorInCircle(Level& level)
+{
+    // Config
+    const float deltaTime = 0.01f;
+    const float radius = 128.0f;
+    constexpr float speed = glm::radians(45.0f);
+
+    // data we need to calculate positions
+    static std::vector<uint32_t> vertices;
+    static std::map<uint32_t, glm::vec2> offsets;
+
+    static bool firstRun = true;
+    static float angle = 0.0f;
+
+    Sector& sector = level.sectors[1];
+
+    // For the first run of the function, collect a list of vertices for the sector  
+    // and map each of the start positions for the vertices. 
+    if (firstRun) {
+        for (uint32_t i = 0; i < sector.wallCount; i++) {
+            const Wall& wall = level.walls[sector.firstWall + i];
+
+            vertices.push_back(wall.startVertex);
+            offsets[wall.startVertex] = level.vertices[wall.startVertex];
+        }
+
+        firstRun = false;
+    }
+
+    // New center for the sector
+    glm::vec2 center = glm::vec2{ cos(angle), sin(angle) } *radius;
+
+    // Loop through and update the position of each of the vertices since both sectors 
+    // referece the same set of vertices, we don't needto update anything for the 
+    // other sector. 
+    for (uint32_t vertexIndex : vertices) {
+        Vertex& vertex = level.vertices[vertexIndex];
+
+        vertex = center + offsets[vertexIndex];
+    }
+
+    angle += speed * deltaTime;
+}
 
 /**w
  * @brief Constructs a hard-coded test level with just a few sectors.
@@ -101,21 +193,21 @@ std::unique_ptr<Level> buildTestLevel()
 // to test the triangulation code and make sure it can handle holes in the sectors. In Doom Style games, 
 // it is extremely common to have sectors inside of sectors (polys with holes). We want to automatically
 // handle this case so that level editor don't need to subdivide their sectors to avoid holes. 
-std::unique_ptr<Level> buildHolyLevel()
+std::unique_ptr<Level> buildHolyGeometry()
 {
     auto level = std::make_unique<Level>();
 
-// Add all the verticies for the level
-    level->vertices.push_back(Vertex{ -64, -64 });
-    level->vertices.push_back(Vertex{  64, -64 });
-    level->vertices.push_back(Vertex{ -32, -32 });
-    level->vertices.push_back(Vertex{  32, -32 });
-    level->vertices.push_back(Vertex{ -32,  32 });
-    level->vertices.push_back(Vertex{  32,  32 });
-    level->vertices.push_back(Vertex{ -64,  64 });
-    level->vertices.push_back(Vertex{  64,  64 });
+    // Add all the verticies for the level
+    level->vertices.push_back(Vertex{ -256, -256 });
+    level->vertices.push_back(Vertex{  256, -256 });
+    level->vertices.push_back(Vertex{  -64, -64 });
+    level->vertices.push_back(Vertex{   64, -64 });
+    level->vertices.push_back(Vertex{  -64,  64 });
+    level->vertices.push_back(Vertex{   64,  64 });
+    level->vertices.push_back(Vertex{ -256,  256 });
+    level->vertices.push_back(Vertex{  256,  256 });
 
-// Add all the walls, going in CCW winding order for defining the inside of the sectors
+    // Add all the walls, going in CCW winding order for defining the inside of the sectors
     level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 0, 1, Wall::NO_BEHIND });     // Sector 0, outside wall
     level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 1, 2, Wall::NO_BEHIND });
     level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 7, 3, Wall::NO_BEHIND });
@@ -133,10 +225,27 @@ std::unique_ptr<Level> buildHolyLevel()
     level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 5, 11, 0 });
     level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 4, 8,  0 });
 
-// Add all the sectors
+    // Add all the sectors
     level->sectors.push_back(Sector{ {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 0.0,   96.0,   0,   8 });
     level->sectors.push_back(Sector{ {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, -32.0,   64.0,   8,   4 });
 
+    return std::move(level);
+}
+
+std::unique_ptr<Level> buildDynamicLevelMovingFlat()
+{
+    auto level = buildHolyGeometry();
+    
+    level->onUpdate = moveSectorUpAndDown;
+
+    return std::move(level);
+}
+
+std::unique_ptr<Level> buildDynamicLevelMovingSector()
+{
+    auto level = buildHolyGeometry();
+    
+    level->onUpdate = moveSectorInCircle;
 
     return std::move(level);
 }
@@ -165,7 +274,8 @@ std::unique_ptr<Level> getLevelSelection()
 {
     std::cout << "Select the level you want to play\n";
     std::cout << "  0 - Initial Test Level\n";
-    std::cout << "  1 - Hole Test Level\n\n";
+    std::cout << "  1 - Floors moving up & down\n";
+    std::cout << "  2 - Sectors Moving Around\n";
 
     //std::vector<std::string> levels = getFilesystemLevels();
     //for (size_t i = 2; i <= levels.size(); i++) {
@@ -180,7 +290,8 @@ std::unique_ptr<Level> getLevelSelection()
     switch (input) 
     {
     case 0: return std::move(buildTestLevel());
-    case 1: return std::move(buildHolyLevel());
+    case 1: return std::move(buildDynamicLevelMovingFlat());
+    case 2: return std::move(buildDynamicLevelMovingSector());
     default: return std::move(buildTestLevel());
     }
 }
@@ -206,6 +317,19 @@ void handleInput()
     if (keys[SDL_SCANCODE_RIGHT]) {
         player.angle -= turnSpeed;
     }
+
+    if (keys[SDL_SCANCODE_UP]) {
+        player.yaw += turnSpeed;
+    }
+    if (keys[SDL_SCANCODE_DOWN]) {
+        player.yaw -= turnSpeed;
+    }
+
+    // Clamp the yaw to up/down. We use a value slightly less than 90 degrees because
+    // otherwise, we would mess up the lookat() call in the renderer, since we assume
+    // that the up vector is always directly up
+    constexpr float maxYaw = glm::radians(89.999f);
+    player.yaw = glm::clamp(player.yaw, -maxYaw, maxYaw);
 
     glm::vec3 forwards { glm::cos(player.angle), glm::sin(player.angle), 0.0f };
     glm::vec3 right { forwards.y, -forwards.x, 0.0f };
@@ -332,6 +456,9 @@ int main(int argc, char** argv)
             }
         }
 
+        if (level->onUpdate != nullptr) 
+            level->onUpdate(*level);
+
         handleInput();
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -343,7 +470,7 @@ int main(int argc, char** argv)
 
         renderer->beginFrame(width, height);
 
-        renderer->renderLevel(*level, player.pos, player.angle);
+        renderer->renderLevel(*level, player.pos, player.angle, player.yaw);
 
         renderer->endFrame();
 

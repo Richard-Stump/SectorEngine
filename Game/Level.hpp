@@ -3,6 +3,7 @@
 
 #include <vector> 
 #include <numeric>
+#include <functional>
 
 #include <glm/glm.hpp>
 
@@ -48,6 +49,11 @@ struct Level
 	std::vector<Vertex>		vertices;
 	std::vector<Sector>		sectors;
 	std::vector<Wall>		walls;
+
+	// Function the engine calls each frame to update the level. 
+	// TODO: This is not flexible, and needs replaced with a better system like Doom's
+	//       thinker system
+	std::function<void(Level&)> onUpdate = nullptr;
 };
 
 #endif//LEVEL_HPP_INCLUDED
