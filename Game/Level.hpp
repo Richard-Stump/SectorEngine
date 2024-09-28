@@ -53,7 +53,7 @@ struct Level
 	// Function the engine calls each frame to update the level. 
 	// TODO: This is not flexible, and needs replaced with a better system like Doom's
 	//       thinker system
-	std::function<void(Level&)> onUpdate = nullptr;
+	std::function<void(Level&, float)> onUpdate = nullptr;
 };
 
 #endif//LEVEL_HPP_INCLUDED

@@ -24,9 +24,7 @@ struct
 } player;
 
 
-void moveSectorUpAndDown(Level& level) {
-    float deltaTime = 0.01f;
-
+void moveSectorUpAndDown(Level& level, float deltaTime) {
     static float timer = 0.0;
     static bool moving = 0;
     static int direction = -1;
@@ -69,12 +67,11 @@ void moveSectorUpAndDown(Level& level) {
     }
 }
 
-void moveSectorInCircle(Level& level)
+void moveSectorInCircle(Level& level, float deltaTime)
 {
     // Config
-    const float deltaTime = 0.01f;
     const float radius = 128.0f;
-    constexpr float speed = glm::radians(45.0f);
+    constexpr float speed = glm::radians(20.0f);    // Radians per second for circle traversal
 
     // data we need to calculate positions
     static std::vector<uint32_t> vertices;
@@ -296,33 +293,33 @@ std::unique_ptr<Level> getLevelSelection()
     }
 }
 
-void handleInput()
+void handleInput(float deltaTime)
 {
     const Uint8* keys = SDL_GetKeyboardState(nullptr);
 
-    const float moveSpeed = 0.1;
-    const float climbSpeed = 0.1;
-    const float turnSpeed = 0.1;
+    const float moveSpeed = 32.0f;                  // Units Per Second
+    const float climbSpeed = 32.0f;                 // Units Per Second
+    const float turnSpeed = glm::radians(90.0f + 45.0f);    // Radians per second
 
     if (keys[SDL_SCANCODE_SPACE]) {
-        player.pos.z += climbSpeed;
+        player.pos.z += climbSpeed * deltaTime;
     }
     if (keys[SDL_SCANCODE_LALT]) {
-        player.pos.z -= climbSpeed;
+        player.pos.z -= climbSpeed * deltaTime;
     }
 
     if (keys[SDL_SCANCODE_LEFT]) {
-        player.angle += turnSpeed;
+        player.angle += turnSpeed * deltaTime;
     }
     if (keys[SDL_SCANCODE_RIGHT]) {
-        player.angle -= turnSpeed;
+        player.angle -= turnSpeed * deltaTime;
     }
 
     if (keys[SDL_SCANCODE_UP]) {
-        player.yaw += turnSpeed;
+        player.yaw += turnSpeed * deltaTime;
     }
     if (keys[SDL_SCANCODE_DOWN]) {
-        player.yaw -= turnSpeed;
+        player.yaw -= turnSpeed * deltaTime;
     }
 
     // Clamp the yaw to up/down. We use a value slightly less than 90 degrees because
@@ -335,16 +332,16 @@ void handleInput()
     glm::vec3 right { forwards.y, -forwards.x, 0.0f };
 
     if (keys[SDL_SCANCODE_W]) {
-        player.pos += forwards * moveSpeed;
+        player.pos += forwards * moveSpeed * deltaTime;
     }
     if (keys[SDL_SCANCODE_S]) {
-        player.pos -= forwards * moveSpeed;
+        player.pos -= forwards * moveSpeed * deltaTime;
     }
     if (keys[SDL_SCANCODE_A]) {
-        player.pos -= right * moveSpeed;
+        player.pos -= right * moveSpeed * deltaTime;
     }
     if (keys[SDL_SCANCODE_D]) {
-        player.pos += right * moveSpeed;
+        player.pos += right * moveSpeed * deltaTime;
     }
 }
 
@@ -443,7 +440,10 @@ int main(int argc, char** argv)
     ImGui_ImplSDL2_InitForOpenGL(window, context);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
-   std::unique_ptr<Renderer> renderer = std::make_unique<Renderer>();
+    std::unique_ptr<Renderer> renderer = std::make_unique<Renderer>();
+
+    const int timeStepMs = 10;
+    const float deltaTime = 1.0f / 1000.0f * (float)timeStepMs;
 
     bool running = true;
     while (running) {
@@ -457,9 +457,9 @@ int main(int argc, char** argv)
         }
 
         if (level->onUpdate != nullptr) 
-            level->onUpdate(*level);
+            level->onUpdate(*level, deltaTime);
 
-        handleInput();
+        handleInput(deltaTime);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
@@ -482,7 +482,7 @@ int main(int argc, char** argv)
 
         SDL_GL_SwapWindow(window);
 
-        SDL_Delay(10);
+        SDL_Delay(timeStepMs);
     }
 
     // Manually release the renderer. 
