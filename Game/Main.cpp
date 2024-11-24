@@ -28,8 +28,8 @@ void moveSectorUpAndDown(Level& level, float deltaTime) {
     static float timer = 0.0;
     static bool moving = 0;
     static int direction = -1;
-    static float initialFloorZ = level.sectors[1].floorHeight;
-    static float initialCeilingZ = level.sectors[1].ceilingHeight;
+    static float initialFloorZ = level.sectors[1].floorZ;
+    static float initialCeilingZ = level.sectors[1].ceilingZ;
 
     const float moveAmount = 64.0f;
     const float moveSpeed = 24.0f;
@@ -39,19 +39,19 @@ void moveSectorUpAndDown(Level& level, float deltaTime) {
     if (moving) {
         Sector& sector = level.sectors[1];
 
-        sector.floorHeight += moveSpeed * direction * deltaTime;
-        sector.ceilingHeight += moveSpeed * direction * deltaTime;
+        sector.floorZ += moveSpeed * direction * deltaTime;
+        sector.ceilingZ += moveSpeed * direction * deltaTime;
 
         // If we reach the end of our movement range, stop the movement and clamp the position. 
-        if (direction < 0 && sector.floorHeight <= initialFloorZ) {
-            sector.floorHeight = initialFloorZ;
-            sector.ceilingHeight = initialCeilingZ;
+        if (direction < 0 && sector.floorZ <= initialFloorZ) {
+            sector.floorZ = initialFloorZ;
+            sector.ceilingZ = initialCeilingZ;
 
             moving = false;
         }
-        if (direction > 0 && sector.floorHeight >= initialFloorZ + moveAmount) {
-            sector.floorHeight = initialFloorZ + moveAmount;
-            sector.ceilingHeight = initialCeilingZ + moveAmount;
+        if (direction > 0 && sector.floorZ >= initialFloorZ + moveAmount) {
+            sector.floorZ = initialFloorZ + moveAmount;
+            sector.ceilingZ = initialCeilingZ + moveAmount;
 
             moving = false;
         }
@@ -69,6 +69,7 @@ void moveSectorUpAndDown(Level& level, float deltaTime) {
 
 void moveSectorInCircle(Level& level, float deltaTime)
 {
+#if 0
     // Config
     const float radius = 128.0f;
     constexpr float speed = glm::radians(20.0f);    // Radians per second for circle traversal
@@ -108,6 +109,7 @@ void moveSectorInCircle(Level& level, float deltaTime)
     }
 
     angle += speed * deltaTime;
+#endif
 }
 
 /**w
@@ -119,7 +121,7 @@ void moveSectorInCircle(Level& level, float deltaTime)
 std::unique_ptr<Level> buildTestLevel()
 {
     auto level = std::make_unique<Level>();
-
+#if 0    
 // Add all the verticies for the level
     level->vertices.push_back(Vertex{ -32.0, -32.0 });  // Y = -32
     level->vertices.push_back(Vertex{  32.0, -32.0 });
@@ -141,7 +143,6 @@ std::unique_ptr<Level> buildTestLevel()
 
     level->vertices.push_back(Vertex{ -96.0,  224.0 });  // Y = 224
     level->vertices.push_back(Vertex{  96.0,  224.0 });
-
 
 // Add all the walls, going in CCW winding order for defining the inside of the sectors
     level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 0, 1, Wall::NO_BEHIND });    // Sector 0 (Done)
@@ -181,7 +182,7 @@ std::unique_ptr<Level> buildTestLevel()
     level->sectors.push_back(Sector{ {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 32.0,    96.0,   12,   4 });
     level->sectors.push_back(Sector{ {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 32.0,    96.0,   16,   4 });
     level->sectors.push_back(Sector{ {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 48.0,   116.0,   20,   6 });
-
+#endif 
     return std::move(level);
 }
 
@@ -204,27 +205,34 @@ std::unique_ptr<Level> buildHolyGeometry()
     level->vertices.push_back(Vertex{ -256,  256 });
     level->vertices.push_back(Vertex{  256,  256 });
 
+    // Add all the LineDefs for the level
+    level->lineDefs.push_back(LineDef{ 0, 1, 0, LineDef::NO_WALL });
+    level->lineDefs.push_back(LineDef{ 3, 2, 4, 8 });
+    level->lineDefs.push_back(LineDef{ 6, 0, 3, LineDef::NO_WALL });
+    level->lineDefs.push_back(LineDef{ 2, 4, 5, 11 });
+    level->lineDefs.push_back(LineDef{ 5, 3, 7, 9 });
+    level->lineDefs.push_back(LineDef{ 1, 7, 1, LineDef::NO_WALL });
+    level->lineDefs.push_back(LineDef{ 4, 5, 6, 10});
+    level->lineDefs.push_back(LineDef{ 7, 6, 2, LineDef::NO_WALL });
+
     // Add all the walls, going in CCW winding order for defining the inside of the sectors
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 0, 1, Wall::NO_BEHIND });     // Sector 0, outside wall
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 1, 2, Wall::NO_BEHIND });
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 7, 3, Wall::NO_BEHIND });
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 6, 0, Wall::NO_BEHIND });
+    level->walls.push_back(Wall{ 0, 0, false, {1.0, 0.0, 0.0} });  // Sector 0, outside wall
+    level->walls.push_back(Wall{ 5, 0, false, {1.0, 0.0, 0.0} });
+    level->walls.push_back(Wall{ 7, 0, false, {1.0, 0.0, 0.0} });
+    level->walls.push_back(Wall{ 2, 0, true, {1.0, 0.0, 0.0} });
 
-    // Since these walls create a hole in the sector, they are wound in the
-    // oposite direction
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 3, 5, 1 });     // Sector 0, inside wall
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 2, 6, 1 });
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 4, 7, 1 });
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 5, 4, 1 });
+    level->walls.push_back(Wall{ 1, 0, false, {1.0, 0.0, 0.0} });  // Sector 0, inside wall
+    level->walls.push_back(Wall{ 3, 0, false, {1.0, 0.0, 0.0} });  
+    level->walls.push_back(Wall{ 6, 0, false, {1.0, 0.0, 0.0} });
+    level->walls.push_back(Wall{ 4, 0, true, {1.0, 0.0, 0.0} });
 
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 2, 9,  0 });     // Sector 1
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 3, 10, 0 });
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 5, 11, 0 });
-    level->walls.push_back(Wall{ {1.0, 0.0, 0.0}, 4, 8,  0 });
+    level->walls.push_back(Wall{ 1, 1, false, {1.0, 0.0, 0.0} });  // Sector 1
+    level->walls.push_back(Wall{ 4, 1, false, {1.0, 0.0, 0.0} });
+    level->walls.push_back(Wall{ 6, 1, false, {1.0, 0.0, 0.0} });
+    level->walls.push_back(Wall{ 3, 1, true, {1.0, 0.0, 0.0} });
 
-    // Add all the sectors
-    level->sectors.push_back(Sector{ {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, 0.0,   96.0,   0,   8 });
-    level->sectors.push_back(Sector{ {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0}, -32.0,   64.0,   8,   4 });
+    level->sectors.push_back(Sector{ 0, 8, 0, 64, {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0} });
+    level->sectors.push_back(Sector{ 8, 4, -32, 48, {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0} });
 
     return std::move(level);
 }

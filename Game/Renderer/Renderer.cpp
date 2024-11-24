@@ -128,18 +128,23 @@ int Renderer::buildWallMesh(const Level& level, std::vector<glm::vec3>& mesh)
 	for (const Sector& sector : level.sectors) {
 
 		for (int i = 0; i < sector.wallCount; i++) {
-			const Wall& wall = level.walls[sector.firstWall + i];
+			const uint32_t wallId = sector.firstWallId + i;
+			const Wall& wall = level.walls[wallId];
+			const LineDef& lineDef = level.lineDefs[wall.lineDefId];
 
-			glm::vec2 start = level.vertices[wall.startVertex];
-			glm::vec2 end = level.vertices[level.walls[wall.nextWall].startVertex];
+			const bool wallFollowsLine = wallId == lineDef.frontWallId;
+			const uint32_t behindWallId = wallFollowsLine ? lineDef.backWallId : lineDef.frontWallId;
+
+			glm::vec2 start = level.vertices[lineDef.startVertexId];
+			glm::vec2 end = level.vertices[lineDef.endVertexId];
 
 			// If there is no sector behind this wall, we can add just a single quad and move on
 			// with our busy lives. 
-			if (wall.behindSector == Wall::NO_BEHIND) {
-				glm::vec3 startBottom{ start, sector.floorHeight };
-				glm::vec3 startTop{ start, sector.ceilingHeight };
-				glm::vec3 endBottom{ end, sector.floorHeight };
-				glm::vec3 endTop{ end, sector.ceilingHeight };
+			if (behindWallId == LineDef::NO_WALL) {
+				glm::vec3 startBottom{ start, sector.floorZ };
+				glm::vec3 startTop{ start, sector.ceilingZ };
+				glm::vec3 endBottom{ end, sector.floorZ };
+				glm::vec3 endTop{ end, sector.ceilingZ };
 
 				mesh.push_back(startBottom);
 				mesh.push_back(wall.color);
@@ -158,16 +163,21 @@ int Renderer::buildWallMesh(const Level& level, std::vector<glm::vec3>& mesh)
 				vertexCount += 6;
 			}
 			else {	
+				// If we are on the back side of the linedef, we need to flip the vertex order to 
+				// keep a correct vertex winding. 
+				if (!wallFollowsLine) std::swap(start, end);
+
 				// If there is a wall behind, we could have 0, 1, or 2 quads to add. depending on the heights of the two
 				// connected sectors. We could have 3 if we had middle textures, but we don't in this demo. 
-				const Sector& behindSector = level.sectors[wall.behindSector];
+				const Wall& behindWall = level.walls[behindWallId];
+				const Sector& behindSector = level.sectors[behindWall.sectorId];
 
 				// We need to add a wall from our floor to the behind sector's floor if their floor is higher. 
-				if (behindSector.floorHeight > sector.floorHeight) {
-					glm::vec3 startBottom{ start, sector.floorHeight };
-					glm::vec3 startTop{ start, behindSector.floorHeight };
-					glm::vec3 endBottom{ end, sector.floorHeight };
-					glm::vec3 endTop{ end, behindSector.floorHeight };
+				if (behindSector.floorZ > sector.floorZ) {
+					glm::vec3 startBottom{ start, sector.floorZ };
+					glm::vec3 startTop{ start, behindSector.floorZ };
+					glm::vec3 endBottom{ end, sector.floorZ };
+					glm::vec3 endTop{ end, behindSector.floorZ };
 
 					mesh.push_back(startBottom);
 					mesh.push_back(wall.color);
@@ -188,11 +198,11 @@ int Renderer::buildWallMesh(const Level& level, std::vector<glm::vec3>& mesh)
 
 				// We need to add a wall from our ceiling to the behind sector's ceiling if their ceiling
 				// is lower. 
-				if (behindSector.ceilingHeight < sector.ceilingHeight) {
-					glm::vec3 startBottom{ start, behindSector.ceilingHeight };
-					glm::vec3 startTop{ start, sector.ceilingHeight };
-					glm::vec3 endBottom{ end, behindSector.ceilingHeight };
-					glm::vec3 endTop{ end, sector.ceilingHeight };
+				if (behindSector.ceilingZ < sector.ceilingZ) {
+					glm::vec3 startBottom{ start, behindSector.ceilingZ };
+					glm::vec3 startTop{ start, sector.ceilingZ };
+					glm::vec3 endBottom{ end, behindSector.ceilingZ };
+					glm::vec3 endTop{ end, sector.ceilingZ };
 
 					mesh.push_back(startBottom);
 					mesh.push_back(wall.color);
@@ -234,26 +244,29 @@ int Renderer::buildFlatMesh(const Level& level, std::vector<glm::vec3>& mesh)
 		std::vector<glm::vec2> sectorVerts;
 		std::vector<std::pair<size_t, size_t>> sectorEdges;
 
-		uint32_t loopStartWallIndex = sector.firstWall;	// Which wall did this edge loop start on?
+		uint32_t loopStartWallIndex = sector.firstWallId;	// Which wall did this edge loop start on?
 		size_t loopStartVertexIndex = 0;				// What vertex number did this edge loop start on?
 
 		// Loop through all of the walls in the sector so we can add them to the triangulation.
 		for (size_t i = 0; i < sector.wallCount; i++) {
-			const Wall& wall = level.walls[sector.firstWall + i];
-			bool endOfEdgeLoop = (wall.nextWall == loopStartWallIndex);
+			const uint32_t wallId = sector.firstWallId + i;
+			const Wall& wall = level.walls[wallId];
+			const LineDef& lineDef = level.lineDefs[wall.lineDefId];
 
-			glm::vec2 startVertex = level.vertices[wall.startVertex];
+			const bool wallFollowsLine = wallId == lineDef.frontWallId;
+			const uint32_t startVertexId = wallFollowsLine ? lineDef.startVertexId : lineDef.endVertexId;
+			glm::vec2 startVertex = level.vertices[startVertexId];
 			sectorVerts.push_back(startVertex);
 
 			// If we reach the end of the edge loop, mark the end vertex of the edge to be the start index
 			// for this loop. Otherwise, mark it as the next vertex we are going to add. 
-			size_t edgeEndVertexIndex = endOfEdgeLoop ? loopStartVertexIndex : i + 1;
+			size_t edgeEndVertexIndex = wall.endOfLoop ? loopStartVertexIndex : i + 1;
 			sectorEdges.push_back(std::make_pair(i, edgeEndVertexIndex));
 			
 			// If we have reached the end of this edge loop, set the indices for the start of the
 			// next one. 
-			if (endOfEdgeLoop) {
-				loopStartWallIndex = sector.firstWall + i + 1;
+			if (wall.endOfLoop) {
+				loopStartWallIndex = sector.firstWallId + i + 1;
 				loopStartVertexIndex = i + 1;
 			}
 		}
@@ -285,19 +298,19 @@ int Renderer::buildFlatMesh(const Level& level, std::vector<glm::vec3>& mesh)
 			auto v3 = verts[tri.vertices[2]];
 
 			// Add the floor triangles
-			mesh.push_back(glm::vec3{ v1.x, v1.y, sector.floorHeight });
+			mesh.push_back(glm::vec3{ v1.x, v1.y, sector.floorZ });
 			mesh.push_back(sector.floorColor);
-			mesh.push_back(glm::vec3{ v2.x, v2.y, sector.floorHeight });
+			mesh.push_back(glm::vec3{ v2.x, v2.y, sector.floorZ });
 			mesh.push_back(sector.floorColor);
-			mesh.push_back(glm::vec3{ v3.x, v3.y, sector.floorHeight });
+			mesh.push_back(glm::vec3{ v3.x, v3.y, sector.floorZ });
 			mesh.push_back(sector.floorColor);
 
 			// Add the ceiling triangles. These have to have the opposite winding from the floor.
-			mesh.push_back(glm::vec3{ v3.x, v3.y, sector.ceilingHeight });
+			mesh.push_back(glm::vec3{ v3.x, v3.y, sector.ceilingZ });
 			mesh.push_back(sector.ceilingColor);
-			mesh.push_back(glm::vec3{ v2.x, v2.y, sector.ceilingHeight });
+			mesh.push_back(glm::vec3{ v2.x, v2.y, sector.ceilingZ });
 			mesh.push_back(sector.ceilingColor);
-			mesh.push_back(glm::vec3{ v1.x, v1.y, sector.ceilingHeight });
+			mesh.push_back(glm::vec3{ v1.x, v1.y, sector.ceilingZ });
 			mesh.push_back(sector.ceilingColor);
 
 			vertexCount += 6;
