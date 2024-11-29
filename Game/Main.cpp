@@ -8,6 +8,7 @@
 
 #include "Level.hpp"
 #include "Renderer/Renderer.hpp"
+#include "Resource/WadFile.hpp"
 
 #include <SDL2/SDL_opengl.h>
 
@@ -233,7 +234,7 @@ std::unique_ptr<Level> buildHolyGeometry()
 
     level->sectors.push_back(Sector{ 0, 8, 0, 64, {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0} });
     level->sectors.push_back(Sector{ 8, 4, -32, 48, {1.0, 1.0, 1.0}, {1.0, 1.0, 1.0} });
-
+    
     return std::move(level);
 }
 
@@ -408,6 +409,10 @@ void RenderUi(const Renderer& renderer)
 
 int main(int argc, char** argv)
 {
+    WadFile testFile("maps/TestMap1.wad");
+
+    testFile.printDirectory(std::cout);
+
     std::unique_ptr<Level> level = getLevelSelection();
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {

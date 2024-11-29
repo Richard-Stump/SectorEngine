@@ -10,6 +10,7 @@ set( SOURCE_FILES
     Renderer/Shader.cpp
 
     Resource/MapLoader.cpp
+    Resource/WadFile.cpp
 )
 
 set( HEADER_FILES
@@ -20,6 +21,7 @@ set( HEADER_FILES
     Renderer/Shader.hpp
 
     Resource/MapLoader.hpp
+    Resource/WadFile.hpp
     
     Utility/Timer.hpp
 )
