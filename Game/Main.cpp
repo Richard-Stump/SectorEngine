@@ -413,7 +413,7 @@ int main(int argc, char** argv)
 
     testFile.printDirectory(std::cout);
 
-    std::unique_ptr<Level> level = getLevelSelection();
+    std::unique_ptr<Level> level = buildDynamicLevelMovingFlat();
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "Could not initalize SDL2! SDL Error: " << SDL_GetError() << std::endl;
