@@ -22,6 +22,7 @@ set( HEADER_FILES
 
     Resource/MapLoader.hpp
     Resource/WadFile.hpp
+    Resource/Utilities.hpp
     
     Utility/Timer.hpp
 )

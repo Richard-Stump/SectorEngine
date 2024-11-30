@@ -3,85 +3,62 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <fstream>
 
+#include <Resource/Utilities.hpp>
+
 /**
- * @brief Helper class for reading from a binary streams.
- * 
- * @details Provides methods for reading specific data types from a binary stream, 
- *          making the code for reading shorter and simpler. 
+ * @brief Class that abstracts the reading of Doom WAD files
  */
-class BinaryStreamReader
-{
-public:
-	BinaryStreamReader() : stream(nullptr)
-	{
-
-	}
-
-	BinaryStreamReader(std::istream& _stream) : stream(&_stream)
-	{
-	}
-
-	BinaryStreamReader(BinaryStreamReader& other) : stream(other.stream)
-	{
-	}
-
-	std::string readString(size_t length)
-	{
-		char* buffer = new char[length + 1];
-		buffer[length] = '\0';
-		stream->read(buffer, length);
-
-		std::string string(buffer);
-
-		delete[] buffer;
-
-		return string;
-	}
-
-	uint8_t readUint8() { return readType<uint8_t>(); }
-	uint16_t readUint16() { return readType<uint16_t>(); }
-	uint32_t readUint32() { return readType<uint32_t>(); }
-	uint64_t readUint64() { return readType<uint64_t>(); }
-
-	int8_t readInt8() { return readType<int8_t>(); }
-	int16_t readInt16() { return readType<int16_t>(); }
-	int32_t readInt32() { return readType<int32_t>(); }
-	int64_t readInt64() { return readType<int64_t>(); }
-
-private:
-	std::istream* stream;
-
-	template<typename T>
-	T readType() {
-		T value;
-		stream->read(reinterpret_cast<char*>(&value), sizeof(T));
-		return value;
-	}
-};
-
 class WadFile
 {
 public:
-	WadFile(std::string&& fileName);
+	WadFile(const std::string&& fileName);
+	WadFile(const std::string& fileName);
 
-	void printDirectory(std::ostream& const stream) const;
+	void printDirectory(std::ostream& stream) const;
+
+	/** @brief Returns the index of the first intance of a lump name, after the specified index */
+	uint32_t indexOfLump(std::string& lumpName, uint32_t afterIndex = 0) const;
+	
+	/** @brief Returns the index of the specified lump for a given map */
+	uint32_t indexOfMapLump(std::string& mapName, std::string& lumpName) const;
+
+	/** @brief Returns a stream for reading a lump specified by the given index */
+	std::istream& lumpStream(uint32_t index);
+
+	/** @brief Returns a stream for reading the first insteance of a lump name, after the specified index */
+	std::istream& lumpStream(std::string& lumpName, uint32_t afterIndex = 0);
+	
+	/** @brief Returns a stream for reading the specified map lump for a given map name */
+	std::istream& mapLumpStream(std::string& mapName, std::string& lumpName);
 
 private:
-	const size_t MAGIC_LENGTH = 4;
+	const size_t MAGIC_LENGTH = 4;		
 	const size_t LUMP_NAME_LENGTH = 8;
 
+	/**
+	 * @brief A directory entry for a lump in the wad file
+	 * 
+	 * @details Contains information on the index, size, offset, and name of a file. 
+	 */
 	struct DirectoryEntry {
-		uint32_t		index;
-		uint32_t		offset;
+		uint32_t		index;	/// Not stored in the wad directory itself, but handy during lookups.
+		uint32_t		offset;	
 		uint32_t		size;
 		std::string		name;
 	};
 
+	/** @brief The entire directory of lumps in the wad */
 	std::vector<DirectoryEntry> directory;
+
 	std::ifstream				stream;
 	BinaryStreamReader			reader;
+
+	// Maps lump names to their directory entry(s). Needs to be a one-to-many
+	// associate because doom uses duplicate lump names across maps and other lumps (Especially for map files)
+	std::map<std::string, std::vector<DirectoryEntry*>> nameMap;
 	
 	std::string					magicString;
 	uint32_t					directoryOffset;
