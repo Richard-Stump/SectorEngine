@@ -19,20 +19,22 @@ public:
 
 	void printDirectory(std::ostream& stream) const;
 
+	uint32_t lumpSize(uint32_t index) const;
+
 	/** @brief Returns the index of the first intance of a lump name, after the specified index */
-	uint32_t indexOfLump(std::string& lumpName, uint32_t afterIndex = 0) const;
+	uint32_t indexOfLump(const std::string& lumpName, uint32_t afterIndex = 0) const;
 	
 	/** @brief Returns the index of the specified lump for a given map */
-	uint32_t indexOfMapLump(std::string& mapName, std::string& lumpName) const;
+	uint32_t indexOfMapLump(const std::string& mapName, const std::string& lumpName) const;
 
 	/** @brief Returns a stream for reading a lump specified by the given index */
-	std::istream& lumpStream(uint32_t index);
+	FileSubsetStream lumpStream(uint32_t index);
 
 	/** @brief Returns a stream for reading the first insteance of a lump name, after the specified index */
-	std::istream& lumpStream(std::string& lumpName, uint32_t afterIndex = 0);
+	FileSubsetStream lumpStream(std::string& lumpName, uint32_t afterIndex = 0);
 	
 	/** @brief Returns a stream for reading the specified map lump for a given map name */
-	std::istream& mapLumpStream(std::string& mapName, std::string& lumpName);
+	FileSubsetStream mapLumpStream(std::string& mapName, std::string& lumpName);
 
 private:
 	const size_t MAGIC_LENGTH = 4;		
@@ -53,19 +55,18 @@ private:
 	/** @brief The entire directory of lumps in the wad */
 	std::vector<DirectoryEntry> directory;
 
-	std::ifstream				stream;
-	BinaryStreamReader			reader;
+	std::string					fileName;
 
 	// Maps lump names to their directory entry(s). Needs to be a one-to-many
 	// associate because doom uses duplicate lump names across maps and other lumps (Especially for map files)
-	std::map<std::string, std::vector<DirectoryEntry*>> nameMap;
+	std::map<std::string, std::vector<uint32_t>> nameMap;
 	
 	std::string					magicString;
 	uint32_t					directoryOffset;
 	uint32_t					lumpCount;
 
-	void loadHeader();
-	void loadDirectory();
+	void loadHeader(BinaryStreamReader& reader);
+	void loadDirectory(BinaryStreamReader& reader);
 };
 
 #endif//WAD_FILE_HPP_INCLUDED

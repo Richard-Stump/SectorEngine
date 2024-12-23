@@ -409,9 +409,8 @@ void RenderUi(const Renderer& renderer)
 
 int main(int argc, char** argv)
 {
-    WadFile testFile("maps/TestMap1.wad");
-
-    testFile.printDirectory(std::cout);
+    DoomMapLoader loader("maps/TestMap1.wad");
+    loader.loadLevel();
 
     std::unique_ptr<Level> level = buildDynamicLevelMovingFlat();
 

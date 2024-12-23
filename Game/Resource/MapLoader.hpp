@@ -41,18 +41,20 @@ public:
 class DoomMapLoader : public MapLoader
 {
 public:
-	DoomMapLoader(const std::string&& fileName, const std::string&& mapName = "map01");
+	DoomMapLoader(const std::string&& fileName, const std::string&& mapName = "MAP01");
 
 	std::unique_ptr<Level> loadLevel() override;
 
 private:
-	const std::string LUMP_VERTICES = "VERTICES";
+	const std::string LUMP_VERTICES = "VERTEXES";
 	const std::string LUMP_LINEDEFS	= "LINEDEFS";
 	const std::string LUMP_SIDEDEFS = "SIDEDEFS";
 	const std::string LUMP_SECTORS = "SECTORS";
 
 	WadFile			wadFile;
 	std::string		mapName;
+
+	void loadVertices(Level& level);
 };
 
 #endif//MAP_LOADER_HPP_INCLUDED
