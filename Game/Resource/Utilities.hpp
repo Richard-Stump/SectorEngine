@@ -65,6 +65,8 @@ public:
 	int32_t readInt32() { return readType<int32_t>(); }
 	int64_t readInt64() { return readType<int64_t>(); }
 
+	void skip(size_t bytes) { _stream->seekg(bytes, std::ios::cur); }
+
 	std::istream& stream() { return *_stream; }
 
 private:

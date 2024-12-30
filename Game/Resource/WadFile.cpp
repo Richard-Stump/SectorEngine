@@ -77,7 +77,7 @@ FileSubsetStream WadFile::lumpStream(uint32_t index)
 		
 	FileSubsetStream stream(fileName, entry.offset, entry.size);
 
-	return stream;
+ 	return stream;
 }
 
 FileSubsetStream WadFile::lumpStream(std::string& lumpName, uint32_t afterIndex)

@@ -5,6 +5,8 @@
 #include <string> 
 #include <memory>
 #include <fstream>
+#include <map>
+#include <queue>
 
 #include <glm/glm.hpp>
 
@@ -46,15 +48,66 @@ public:
 	std::unique_ptr<Level> loadLevel() override;
 
 private:
+	struct DoomLinedef
+	{
+		static const uint16_t NO_SIDEDEF = 0xFFFF;
+
+		uint16_t id;
+		uint16_t startVertexId;
+		uint16_t endVertexId;
+		uint16_t frontSidedefId;
+		uint16_t backSidedefId;
+	};
+
+	struct DoomSidedef
+	{
+		uint16_t	id;
+		uint16_t	sectorId;
+		uint16_t	linedefId;
+		std::string upperTexture;
+		std::string middleTexture;
+		std::string lowerTexture;
+	};
+
+	struct DoomSector
+	{
+		int16_t		floorZ;
+		int16_t		ceilingZ;
+
+		std::string	floorTexture;
+		std::string ceilingTexture;
+	};
+
+	// Names for the different map lumps that are used by Doom
 	const std::string LUMP_VERTICES = "VERTEXES";
 	const std::string LUMP_LINEDEFS	= "LINEDEFS";
 	const std::string LUMP_SIDEDEFS = "SIDEDEFS";
-	const std::string LUMP_SECTORS = "SECTORS";
+	const std::string LUMP_SECTORS	= "SECTORS";
+
+	// Sizes of individual object entries in the map files.
+	const uint32_t VERTEX_ENTRY_SIZE	= 4;
+	const uint32_t SIDEDEF_ENTRY_SIZE	= 30;
+	const uint32_t LINEDEF_ENTRY_SIZE	= 14;
+	const uint32_t SECTOR_ENTRY_SIZE	= 26;
+
+	// Max number of characters in a texture name
+	const size_t TEX_NAME_SIZE = 8;
+
+	// String that corresponds to no texture
+	const std::string TEX_NONE = "-";
 
 	WadFile			wadFile;
 	std::string		mapName;
 
-	void loadVertices(Level& level);
+	void loadVertices();
+	void loadSidedefs();
+	void loadLinedefs();
+	void loadSectors();
+
+	std::vector<glm::vec2>		doomVertices;
+	std::vector<DoomSidedef>	doomSidedefs;
+	std::vector<DoomLinedef>	doomLinedefs;
+	std::vector<DoomSector>		doomSectors;
 };
 
 #endif//MAP_LOADER_HPP_INCLUDED
